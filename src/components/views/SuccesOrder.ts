@@ -1,0 +1,5 @@
+
+
+interface ISuccsesOrder {
+  total: number;
+}

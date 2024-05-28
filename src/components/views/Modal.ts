@@ -1,0 +1,4 @@
+
+interface IModal {
+  content: HTMLElement;
+}

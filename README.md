@@ -52,8 +52,10 @@ export interface IProductCard {
   image: string;
   title: string;
   category: string;
-  price: number;
+  price: number | null;
   inBasket: boolean;
+  addToBasket(): void;
+  removeFromBasket(): void;
 }
 ```
 
@@ -61,68 +63,52 @@ export interface IProductCard {
 
 ```
 export interface IFormOrder {
-  payMethod: string;
-  address: string;
-  email: string;
-  phone: string;
-  total: number;
+  _payMethod: string;
+  _address: string;
+  _email: string;
+  _phone: string;
+  _formErrors: string;
+  _items: TCardInBasket[];
+
+  set payMethod(pay: string);
+  get payMethod(): string;
+  set address(address: string);
+  get address(): string;
+  set email(email: string);
+  get email(): string;
+  set phone(phone: string);
+  get phone(): string;
+  set items(items: TCardInBasket[]);
+  get items(): TCardInBasket[];
+  validateOrder(): void;
+  clearOrder(): void;
+  validdatePayMethod(): void;
+  validateAddres(): void;
+  validateEmail(): void;
+  validatePhone(): void;
+  postOrder(): void;
 }
 ```
 
-Интерфейс для модели данных карточек
+Интерфейс для модели данных
 
 ```
-export interface ICardsData {
-  cards: IProductCard[];
-  preview: string | null;
-  setItems(items: Record<keyof TCardInBasket, string>): void;
-  getCard(cardId: string): Record<keyof TCardInBasket, string>;
-  deleteProductCardFromBasket(cardId: string, payload: Function | null): void;
-  checkCardInBasket(cardId: string): boolean;
-  checkPrice(price: string): boolean;
-}
-```
+export interface IData {
+  _catalog: IProductCard[];
+  _order: IFormOrder;
+  _preview: IProductCard;
 
-Интерфейс для модели данных корзины
-
-```
-export interface IBasketModel {
-  items: Map<string, number>;
-  add(id: string): void;
-  remove(id: string): void;
-}
-```
-
-Интерфейс для модели данных событий
-
-```
-export interface IEventEmitter {
-  emit: (event: string, data: unknown) => void;
-}
-```
-
-Интерфейс для модели данных формы
-
-```
-export interface TFormData {
-  getFormInfo(): IFormOrder;
-  setFormInfo(formData: IFormOrder): void;
-}
-```
-
-Интерфейс конструктора, на фходе контейнер и выводим в него  
-
-```
-export interface IViewConstructor {
-  new (container: HTMLElement, events?: IEventEmitter): IViewConstructor;
-}
-```
-
-Интерфейс класса отображения
-
-```
-export interface IView {
-  render (data?: object): HTMLElement;
+  set catalog(cards: IProductCard[]);
+  get catalog(): IProductCard[];
+  set order(order: IFormOrder);
+  get order(): IFormOrder;
+  set preview(order: IProductCard);
+  get preview(): IProductCard;
+  cardInBasket(card: IProductCard): boolean;
+  get basketTotaalPrice(): number;
+  get totalBasketLength(): number;
+  get idCardsFromBasket(): string[];
+  clearBasket(): void;
 }
 ```
 
@@ -150,6 +136,22 @@ export type TAddressAndPay = Pick<IFormOrder, 'payMethod' | 'address'>;
 export type TEmailAndPhone = Pick<IFormOrder, 'email' | 'phone'>;
 ```
 
+Интерфейс для отправки запроса на совпршение сделки
+```
+export interface IOrderApi {
+  items: string[];
+  total: number;
+}
+```
+
+Интерфейс для получения ответа зпроса на сделку
+```
+export interface IOrderResult {
+  id: string;
+	total: number;
+}
+```
+
 
 ## Архитектура приложения
 
@@ -174,145 +176,162 @@ export type TEmailAndPhone = Pick<IFormOrder, 'email' | 'phone'>;
 - `emit` - инициализация события
 - `onAll` - Слушать все события
 - `offAll` - Сбросить все обработчики
-- `trigger` - возвращает функцию, при вызове которой инициализируется требуемое в параметрах событие   
+- `trigger` - возвращает функцию, при вызове которой инициализируется требуемое в параметрах событие
+
+#### Класс Components
+Базовый класс для наследования модели отображения. Реализует базовые элементы работы с элементами, такие как переключение классов, установка текста у элемента и т.д.
+
+#### Класс Model
+Базовый класс для компонентов модели данных. Позволяем связать переданный данные со свойствами объекта (реализуется в конструкторе) и инициализировать вызов именованных событий через метод emitChanges.
 
 ### Слой данных
 
-#### ICardsData
-Класс отвечает за хранение и логику работы с карточками.\
-Конструктор класса принимает инстант брокера событий.\
-В полях класса хранятся следующие данные:
-- cards: IProductCard[] - массив объекта карточек
-- preview: string | null - id карточки, выбранной для просмотра в модальном окне.
-- events: IEvents - экземпляр класса `EventEmitter` для инициации событий при изменении данных.
+#### ProductCard
+Класс отвечает за хранение и логику работы с корзиной на добавление и удаление ее оттуда. Структура карточки определена ответом с сервера.
 
-Так же класс предоставляет набор методов для взаимодействия с этими данными.
-- showAllCards(cards: IProductCard[]): Record<keyof TCardMain, string>[] - информация о карточках на главной странице.
-- setItems(items: Record<keyof TCardInBasket, string>): void - добавляет карточку в корзину.
-- getCard(cardId: string): Record<keyof TCardInBasket, string> - отоюражает карточку в корзине.
-- deleteProductCardFromBasket(cardId: string, payload: Function | null): void - удалет карточку из корзины.
-- checkCardInBasket(cardId: string): boolean - проверяет добавлена ли карточка в корзину.
-- checkPrice(price: string): boolean - проверяет бесценна ли карточка.
 
-#### IBasketModel
-Класс который отвечает за логику работы корзины.
-В полях класса хранятся следующие данные:
-- items - массив с неповторающимеся товарами.
-- events: IEvents - экземпляр класса `EventEmitter` для инициации событий при изменении данных.
+#### FormOrder
+Класс который отвечает за процесс оформления заказа. Содержит свойства, которые отображаются на полях соответствующих форм и реализует логику валидации свойств. Изменения в любом из свойств вызывают проверку всех полей.
 
-Так же класс предоставляет набор методов для взаимодействия с этими данными.
-- add(id: string): void - добавление в массив корзыны товара.
-- remove(id: string): void- удаление из массивы корзыны товара.
-
-#### TFormData
-Класс, который отвечает за работу с полями формы.
-
-Класс предоставляет набор методов для взаимодействия с данными формы.
-- getFormInfo(): IFormOrder - получаем данные формы.
-- setFormInfo(formData: IFormOrder): void - заполняем данные формы.
-- clearForm(formData: IFormOrder): void - очистка формы от данных.
+#### Data
+Класс, который позволяет отслеживать состояние приложения. 
+- _catalog - спосок лотов на странице.
+- _order - состояние заказа.
+- _preview - карточка для просмотра ее в модальном окне.
+Также отслеживает товары в корзине.
 
 ### Классы представления
 Все классы представления отвечают за отображение внутри контейнера (DOM-элемент) передаваемых в них данных.
 
+#### Класс Page
+Класс предназначен для отображения наполнения главной страницы.
+
+Поля класса:
+- _counter: HTMLElement - элемент разметки с количеством товаров в корзине.
+- _gallery: HTMLElement - элемент разметки с карточками на странице.
+- _wrapper: HTMLElement - элемент разметки для блокировки прокрутки на странице.
+- _basket: HTMLButtonElement - элемент разметки с кнопкой, для открытыя корзины.
+
+Методы:
+- set counter(value: number): void - метод для установки количества элементов в корзине.
+- set cardsInPage(items: HTMLElement[]): void - етод для установки карточек на странице.
+- set loked(value: boolean): void - метод блокировки скрола.
+
 #### Класс Modal
-Реализует модальное окно. Так же предоставляет методы `open` и `close` для управления отображением модального окна. Устанавливает слушатели на клавиатуру, для закрытия модального окна по Esc, на клик в оверлей и кнопку-крестик для закрытия попапа.  
-- constructor(selector: string, events: IEvents) Конструктор принимает селектор, по которому в разметке страницы будет идентифицировано модальное окно и экземпляр класса `EventEmitter` для возможности инициации событий.
-
-Поля класса
-- modal: HTMLElement - элемент модального окна
-- events: IEvents - брокер событий
-
-#### Класс BasketItemView
-Расширяет класс Modal. Класс отвечающий за отображение полей в модальном окне корзины.
-Поля класса:
-- submitButton: HTMLButtonElement - Кнопка подтверждения.
-- title: string - текст карточки.
-- price: number - цена карточки.
-- total: number - общая сумма заказа.
-
-Методы:
-- deleteCard(cardId: string): void - удаление карточки из списка отображаемого. 
-- open(handleSubmit: Function): void - расширение родительского метода, принимает обработчик, который передается при инициации события подтверждения.
-
-#### Класс CardItemView
-Расширяет класс Modal. Предназначен для реализации модального окна с отображением данных о карточке. При открытии модального окна получает данные карточки, которые нужно показать.\
-Также имеет кнопку добавления в корзину.
+Класс предназначен для рендера модального окна с определенным контентом.
 
 Поля класса:
-- categoryElement: HTMLElementnt - элемент разметки с категорией товара.
-- titleElement: HTMLElementnt - элемент разметки с заголовоком товара.
-- imageElement: HTMLElement - элемент разметки с изображением товара.
-- descriptionElement: HTMLElement - элемент разметки с описанием товара.
-- priceElement: HTMLElement - элемент разметки с ценой товара.
-- addButton: HTMLButtonElement - кнопка добавления товара в корзину.\
+- _closeButton: HTMLButtonElement - элемент разметки c кнопкjq для закрытия модального окна.
+- _content: HTMLElement - элемент разметки c контентjv модального окна.
 
 Методы:
-- open(data: { category: string, title: string, description: string, image: string, price: number}): void - расширение родительского метода, принимает данные карточки, которые используются для заполнения атрибутов элементов модального окна.
-- setAdd(isAdd: boolean): void - изменяет активность кнопки добавления.
-- checkPrice(price: boolean): void - проверка цены на null.
+- set content - метод для установки контента в модальном окне.
+- open(): void - метод для открытия модального окна.
+- close(): void - метод для закрытия модального окна.
+- render(data: IModal): HTMLElement - метод для рендера контента
 
-#### Класс firstStepOrder
-Расширяет класс Modal. Предназначен для реализации модального окна c заполнением первых данных формы.\
+#### Класс Basket
+Класс предназначен для представления корзины с определенным контентом.
 
 Поля класса:
-- _form: HTMLFormElement - элемент формы
-- payMethodElement: HTMLElementnt - элемент разметки с методом оплаты.
-- addressElement: HTMLElementnt - элемент разметки с адресом доставки.
-- nextButton: HTMLButtonElement - кнопка которая переводит на 2-ю часть формы.\
+- _list: HTMLElement - элемент разметки для списка.
+- _total: HTMLElement - элемент разметки c общей стоимостью заказа.
+- buttom: HTMLElement - элемент разметки с кнопкой оформления заказа.
 
 Методы:
-- setNext(isNext: boolean): void - изменяет активность кнопки далее
-- open(handleSubmit: Function): void - расширение родительского метода, принимает обработчик, который передается при инициации события подтверждения.
-- get form: HTMLElement - геттер для получения элемента формы.
+- set items(items: HTMLElement[]): void - установка содержимого корзины.
+- set total(total: number): void - установка общей стоимости.
+- set valid(value: boolean): void - определение валидности для оформления заказа.
 
-#### Класс secondStepOrder
-Расширяет класс Modal. Предназначен для реализации модального окна c заполнением вторых данных формы.\
+#### Класс BasketItem
+Класс предназначен для представления корзины с определенным контентом.
 
 Поля класса:
-- submitButton: HTMLButtonElement - Кнопка подтверждения.
-- _form: HTMLFormElement - элемент формы.
-- emailElement: HTMLElementnt - элемент разметки с почтой пользователя.
-- phoneElement: HTMLElementnt - элемент разметки с телефоном пользователя.
+- _index: HTMLElement - элемент разметки в номера корзине.
+- _title: HTMLElement - элемент разметки заголовка карточки.
+- _price: HTMLElement- элемент разметки цены карточки.
+- _deleteBtn: HTMLButtonElement - элемент разметки с кнопкой удаления из списка корзины.
 
 Методы:
-- setOrder(isOrder: boolean): void - изменяет активность кнопки для оформления заказа.
-- open(handleSubmit: Function): void - расширение родительского метода, принимает обработчик, который передается при инициации события подтверждения.
-- get form: HTMLElement - геттер для получения элемента формы.
+- set index(value: number) - метод установки номера в списке корзины.
+- set title(value: string) - метод установки заголовка.
+- set price(value: number) - метод установки цены.
 
-#### Класс endStepOrder
-Расширяет класс Modal. Предназначен для реализации модального окна c завершенной покупкой.\
+#### Класс Card
+Класс предназначен для представления корзины с определенным контентом.
 
 Поля класса:
-- submitButton: HTMLButtonElement - Кнопка подтверждения.
-- _form: HTMLFormElement - элемент формы.
-- totalElement: HTMLElementnt - элемент разметки с общей суммой.
+- _category: HTMLElement - элемент разметки с категорией карточки.
+- _title: HTMLElement - элемент разметки с заголовком карточки.
+- _image?: HTMLImageElement - элемент разметки с картинкой карточки.
+- _description?: HTMLElement - элемент разметки с описанием карточки.
+- _button?: HTMLButtonElement - элемент разметки с кнопкой карточки.
+- _price?: HTMLElement - элемент разметки с ценой карточки.
 
 Методы:
-- open(handleSubmit: Function): void - расширение родительского метода, принимает обработчик, который передается при инициации события подтверждения.
-- get form: HTMLElement - геттер для получения элемента формы.
+- set category(value: string) - метод для установки категории карточки.
+- set title(value: string) - метод для установки заголовка карточки.
+- set image(value: string) - метод для установки картинки карточки.
+- set description(value: string) - метод для установки описания карточки.
+- set button(value: string) - метод для установки кнопки карточки с определенным текстом.
+- set price(value: number) - метод для установки цены карточки.
+
+#### Класс FirstStepOrder
+Класс для отображения первой части заказа.
+
+Поля класса:
+- payMethodCont: HTMLDivElement - элемент разметки с методами оплаты.
+- payMethodButtons: HTMLButtonElement[] - массив с элементами кнопок.
+
+Методы:
+- payMethodChoise(method: string): void - выбор метода оплаты для выделения кнопки
+- set payment(value: string) - метод для установки оплаты.
+- set address(value: IPaymentType) - метод для установки адреса.
+
+#### Класс SecondStepOrder
+Класс для отображения второй части заказа.
+
+Методы:
+- set phone(value: string) - метод для установки телефона.
+- set email(value: string) - метод для установки почты.
+
+#### Класс SuccsesOrder 
+Класс представления, определяющий отображение основной информации об оформленном заказе.
+
+Поля класса:
+_close: HTMLElement  - элемент разметки для закрытия.
+_total: HTMLElement  - элемент разметки где указана полная стоимость заказа.
+
+Методы:
+set total(value: number) - метод для установки общей суммы заказа.
 
 ### Слой коммуникации
 
 #### Класс AppApi
 Принимает в конструктор экземпляр класса Api и предоставляет методы реализующие взаимодействие с бэкендом сервиса.
 
+#### Класс LarekApi
+Реализует методы для взаимодействия с сервером, такие как получение списка карточек, получение карточки и отправка запроса на заказ.
+
 ## Взаимодействие компонентов
 Код, описывающий взаимодействие представления и данных между собой находится в файле `index.ts`, выполняющем роль презентера.\
 Взаимодействие осуществляется за счет событий генерируемых с помощью брокера событий и обработчиков этих событий, описанных в `index.ts`\
 В `index.ts` сначала создаются экземпляры всех необходимых классов, а затем настраивается обработка событий.
 
-*Список всех событий, которые могут генерироваться в системе:*\
-*События изменения данных (генерируются классами моделями данных)*
-- `formOrder:changed` - изменение данных формы
-- `form:previewClear` - необходима очистка данных в модальном окне формы
-
 *События, возникающие при взаимодействии пользователя с интерфейсом (генерируются классами, отвечающими за представление)*
-- `productcard:select` - выбор карточки для отображения в модальном окне.
-- `basket:open` - открытие модального окна корзины с отображением добавленных карточек.
-- `add-productcard:submit` - добавление карточки в корзину.
-- `remove-productcard:card:submit` - удаление карточки из корзины.
-- `new-order:submit` - событие, генирируемое при оформлении заказа.
-- `edit-form1:input` - изменение данных в форме с данными заказа1.
-- `edit-form2:input` - изменение данных в форме с данными заказа2.
-- `order:submit` - оформление заказа. 
+
+`catalog:changed` - подгружаем доступные лоты
+`card:open` - открываем карточку лота для просмотра
+`basket:open` - открываем корзину
+`lot:changed` - добавляем/удаляем лот из корзины
+`formErrors:changed` - проверяем форму отправки
+`order_payment:open` - начинаем оформление заказа
+`firstOrder:submit` - заполнили первую форму
+`secondContacts:submit` - заполнили вторую форму
+`order:post` - завершаем заказ
+`payment:changed` - выбираем способ оплаты
+`order.address:change` - изменили адрес доставки
+`contacts.email:change` - изменили почту для связи
+`contacts.phone:change` - изменили телефон для связи
+`modal:open` - блокировка при открытии модального окна
+`modal:close` - снятие блокировки при закрытии модального окна
