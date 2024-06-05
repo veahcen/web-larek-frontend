@@ -1,5 +1,5 @@
 export interface IProductCard {
-  _id: string;
+  id: string;
   description: string;
   image: string;
   title: string;
@@ -11,26 +11,16 @@ export interface IProductCard {
 }
 
 export interface IFormOrder {
-  _payMethod: string;
-  _address: string;
-  _email: string;
-  _phone: string;
-  _formErrors: string;
-  _items: TCardInBasket[];
+  payment: string;
+  address: string;
+  email: string;
+  phone: string;
+  formErrors: IFormErrors;
+  items: IProductCard[];
 
-  set payMethod(pay: string);
-  get payMethod(): string;
-  set address(address: string);
-  get address(): string;
-  set email(email: string);
-  get email(): string;
-  set phone(phone: string);
-  get phone(): string;
-  set items(items: TCardInBasket[]);
-  get items(): TCardInBasket[];
   validateOrder(): void;
   clearOrder(): void;
-  validdatePayMethod(): void;
+  validatePayMethod(): void;
   validateAddres(): void;
   validateEmail(): void;
   validatePhone(): void;
@@ -46,16 +36,22 @@ export interface IData {
   get catalog(): IProductCard[];
   set order(order: IFormOrder);
   get order(): IFormOrder;
+  get basket(): IProductCard[];
   set preview(order: IProductCard);
   get preview(): IProductCard;
   cardInBasket(card: IProductCard): boolean;
-  get basketTotaalPrice(): number;
-  get totalBasketLength(): number;
-  get idCardsFromBasket(): string[];
+  getBasketTotalPrice(): number;
+  getTotalBasketLength(): number;
+  getIdCardsFromBasket(): string[];
   clearBasket(): void;
+  createOrder(): IFormOrder;
 }
 
-export interface IOrderApi {
+export interface IOrderApi  {
+  payment: string;
+  address: string;
+  email: string;
+  phone: string;
   items: string[];
   total: number;
 }
@@ -65,10 +61,23 @@ export interface IOrderResult {
 	total: number;
 }
 
-export type TCardMain = Pick<IProductCard, '_id' | 'image' | 'title' | 'category' | 'price' | 'inBasket'>;
+export type IFormErrors = Partial<Record<keyof IFormOrder, string>>;
 
-export type TCardInBasket = Pick<IProductCard, '_id' | 'title' | 'price' | 'inBasket'>;
+export type ICardCategory =
+	| 'софт-скил'
+	| 'другое'
+	| 'дополнительное'
+	| 'кнопка'
+	| 'хард-скил';
 
-export type TAddressAndPay = Pick<IFormOrder, 'payMethod' | 'address'>;
+export  const CATEGOTY_MAP: Record<ICardCategory, string> = {
+	'софт-скил': 'soft',
+	'другое': 'other',
+	'дополнительное': 'additional',
+	'кнопка': 'button',
+	'хард-скил': 'hard',
+};
 
-export type TEmailAndPhone = Pick<IFormOrder, 'email' | 'phone'>;
+export type CatalogChangeEv = {
+	catalog: IProductCard[];
+};
