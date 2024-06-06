@@ -41,6 +41,6 @@ export class BasketItem extends Component<IBasketCard> {
 	}
 
 	set price(value: number) {
-		this.setText(this._price, value);
+		this.setText(this._price, `${value} синапсов`);
 	}
 }

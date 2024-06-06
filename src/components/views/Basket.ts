@@ -44,7 +44,7 @@ export class Basket extends Component<IBasket> {
 	}
 
 	set total(total: number) {
-		this.setText(this._total, total);
+		this.setText(this._total, `${total} синапсов`);
 	}
 
 	set valid(value: boolean){

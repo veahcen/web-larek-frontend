@@ -26,6 +26,6 @@ export class SuccessOrder extends Component<ISuccsesOrder> {
     }
 
     set total(value: number){
-        this._total.textContent = `Списано ${value}`;
+        this._total.textContent = `Списано ${value} синапсов`;
     }
 }

@@ -78,7 +78,7 @@ export class Card extends Component<ICard> {
 	}
 
 	set price(value: number) {
-		this.setText(this._price, value);
+		this.setText(this._price, `${value} синапсов`);
 		this.setDisabled(this._button, value == null);
 	}
 
